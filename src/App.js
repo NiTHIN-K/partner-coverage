@@ -10,7 +10,7 @@ function App() {
   const [carriers, setCarriers] = useState([]);
 
   useEffect(() => {
-    const csvFilePath = process.env.PUBLIC_URL + '/CarrierStateMapping.csv';
+    const csvFilePath = 'https://partner-coverage.vercel.app/CarrierStateMapping.csv';
     Papa.parse(csvFilePath, {
       download: true,
       header: true,
