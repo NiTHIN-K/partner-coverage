@@ -1,44 +1,77 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import USAMap from "react-usa-map";
-// import stateData from "./CarrierStateMapping.csv"
+import Papa from 'papaparse'; // Assuming you are using PapaParse for CSV parsing
 
 function App() {
-
-  // const csvString = stateData; // Import the CSV as a string
-  // const lines = csvString.split('\n');
-
-  // const originalData = {};
-
-  // for (const line of lines) {
-  //   const [key, value] = line.split(',');
-  //   originalData[key] = value;
-  //   console.log(key + " : " + value);
-  // }
-
-  // console.log("OGDATA" + originalData);
-  // Initialize the state for the custom configurations
+  // State for the selected carrier and the custom map configuration
+  const [selectedCarrier, setSelectedCarrier] = useState('');
   const [customConfig, setCustomConfig] = useState({});
+  const [carrierStateMapping, setCarrierStateMapping] = useState({});
+  const [carriers, setCarriers] = useState([]);
 
-  // Define the statesCustomConfig function using the customConfig state
-  const statesCustomConfig = () => {
-    return customConfig;
-  };
+  useEffect(() => {
+    const csvFilePath = process.env.PUBLIC_URL + '/CarrierStateMapping.csv';
+    Papa.parse(csvFilePath, {
+      download: true,
+      header: true,
+      skipEmptyLines: true,
+      complete: (result) => {
+        const mapping = {};
+        const carriersSet = new Set();
 
-  // Define the mapHandler function to handle map clicks and update the state
-  const mapHandler = (event) => {
-    // Get the name of the clicked state
-    const stateName = event.target.dataset.name;
+        result.data.forEach(row => {
+          const carrierList = row.Carriers.split(',').map(c => c.trim());
+          carrierList.forEach(carrier => {
+            if (!mapping[carrier]) {
+              mapping[carrier] = [];
+            }
+            mapping[carrier].push(row.code);
+            carriersSet.add(carrier);
+          });
+        });
 
-    // Update the customConfig state to change the color of the clicked state
-    setCustomConfig(prevConfig => ({
-      ...prevConfig,
-      [stateName]: { fill: "navy" } // Change the color to navy (or any desired color)
-    }));
+        setCarrierStateMapping(mapping);
+        setSelectedCarrier(Array.from(carriersSet)[0]);
+        setCarriers(Array.from(carriersSet)); // Update the carriers state
+        // console.log(Array.from(carriersSet)); // Log the carriers to ensure they're set
+      }
+    });
+  }, []);
+
+
+
+  // Update the map when a new carrier is selected
+  useEffect(() => {
+    if (!selectedCarrier || !carrierStateMapping[selectedCarrier]) return;
+
+    const statesToHighlight = carrierStateMapping[selectedCarrier];
+    const newConfig = statesToHighlight.reduce((config, state) => {
+      config[state] = { fill: "blue" }; // Choose your highlight color
+      return config;
+    }, {});
+
+    setCustomConfig(newConfig);
+  }, [selectedCarrier, carrierStateMapping]);
+
+  // Dropdown change handler
+  const handleCarrierChange = (event) => {
+    setSelectedCarrier(event.target.value);
   };
 
   return (
     <div>
-      <USAMap customize={statesCustomConfig()} onClick={mapHandler} />
+      {/* <select onChange={handleCarrierChange} value={selectedCarrier}>
+        {Object.keys(carrierStateMapping).map(carrier => (
+
+          <option key={carrier} value={carrier}>{carrier}</option>
+        ))}
+      </select> */}
+      <select onChange={handleCarrierChange} value={selectedCarrier}>
+        {carriers.map(carrier => ( // Use the carriers state here
+          <option key={carrier} value={carrier}>{carrier}</option>
+        ))}
+      </select>
+      <USAMap customize={customConfig} />
     </div>
   );
 }
