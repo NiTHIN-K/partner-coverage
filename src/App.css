@@ -1,48 +1,57 @@
-.App {
-  text-align: center;
+:root {
+  --ink: #172033;
+  --muted: #667085;
+  --line: #e4e7ec;
+  --mint: #ecfdf5;
+  --surface: #ffffff;
 }
 
-.USAMap {
-  margin: 0 auto; /* This centers the SVG horizontally */
-}
+* { box-sizing: border-box; }
 
-.body {
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-}
-
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
-.App-header {
-  background-color: #282c34;
+.coverage-page {
   min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
+  padding: 72px 24px;
+  color: var(--ink);
+  background: linear-gradient(135deg, #f8fafc 0%, #edf7f4 100%);
 }
 
-.App-link {
-  color: #61dafb;
+.coverage-hero, .coverage-workspace { width: min(1120px, 100%); margin: 0 auto; }
+.coverage-hero { max-width: 760px; margin-bottom: 48px; text-align: center; }
+.eyebrow { margin: 0 0 12px; color: #0f766e; font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.coverage-hero h1 { margin: 0; font-size: clamp(34px, 5vw, 58px); letter-spacing: -.055em; line-height: 1.05; }
+.coverage-hero > p:last-child { max-width: 620px; margin: 20px auto 0; color: var(--muted); font-size: 17px; line-height: 1.7; }
+
+.coverage-workspace { display: grid; grid-template-columns: 310px minmax(0, 1fr); overflow: hidden; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); box-shadow: 0 22px 60px rgba(39, 73, 90, .12); }
+.coverage-controls { padding: 26px; border-right: 1px solid var(--line); background: #fbfdfd; }
+.control-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 22px; }
+.control-heading h2 { margin: 0; font-size: 19px; letter-spacing: -.03em; }
+.control-heading p { margin: 3px 0 0; color: var(--muted); font-size: 13px; }
+.clear-button { border: 0; background: transparent; color: #0f766e; font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; }
+.carrier-list { display: grid; gap: 8px; }
+.carrier-button { display: flex; align-items: center; width: 100%; gap: 10px; padding: 10px 12px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: #344054; font: inherit; font-size: 14px; text-align: left; cursor: pointer; transition: background .16s ease, border-color .16s ease; }
+.carrier-button:hover { background: #f2f4f7; }
+.carrier-button.selected { border-color: #9ee7d7; background: var(--mint); color: #075d57; font-weight: 700; }
+.carrier-button span { width: 10px; height: 10px; border-radius: 50%; flex: 0 0 auto; }
+.status-message { margin: 0 0 18px; color: #b42318; font-size: 14px; }
+
+.map-panel { min-width: 0; padding: 34px; }
+.map-summary { display: flex; gap: 36px; margin-bottom: 20px; }
+.map-summary div { display: grid; gap: 2px; }
+.map-summary span { color: var(--muted); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+.map-summary strong { font-size: 22px; letter-spacing: -.04em; }
+.state-grid { display: grid; grid-template-columns: repeat(10, minmax(42px, 1fr)); gap: 8px; min-height: 390px; align-content: center; padding: 24px; border: 1px solid #edf0f2; border-radius: 12px; background: linear-gradient(150deg, #fff, #f8fbfb); }
+.state-tile { display: grid; min-height: 50px; place-items: center; border: 1px solid #e4e7ec; border-radius: 7px; background: #f2f4f7; color: #98a2b3; font-size: 12px; font-weight: 800; letter-spacing: .03em; }
+.state-tile.covered { border-color: rgba(23, 32, 51, .12); color: #172033; }
+.map-note { margin: 16px 0 0; color: var(--muted); font-size: 12px; }
+
+@media (max-width: 760px) {
+  .coverage-page { padding: 48px 16px; }
+  .coverage-workspace { grid-template-columns: 1fr; }
+  .coverage-controls { border-right: 0; border-bottom: 1px solid var(--line); }
+  .carrier-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .map-panel { padding: 22px; }
+  .state-grid { grid-template-columns: repeat(6, minmax(36px, 1fr)); min-height: 250px; padding: 14px; gap: 6px; }
+  .state-tile { min-height: 42px; }
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
+@media (max-width: 440px) { .carrier-list { grid-template-columns: 1fr; } }
