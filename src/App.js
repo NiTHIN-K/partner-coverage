@@ -1,246 +1,148 @@
-// import React, { useState, useEffect } from 'react';
-// import USAMap from "react-usa-map";
-// import Papa from 'papaparse'; // Assuming you are using PapaParse for CSV parsing
-// import Select from 'react-select'; // You may need to install react-select
-
-// const carrierColors = {
-//   "International Bridge": "#FF5733",  // Red
-//   "Courier Express": "#FFC300",  // Yellow
-//   "Hackbarth": "#DAF7A6",  // Light Green
-//   "LSO": "#581845",  // Dark Purple
-//   "GLS": "#C70039",  // Maroon
-//   "IntelliQuick Delivery": "#900C3F",  // Dark Red
-//   "OnTrac": "#FFC0CB",  // Pink
-//   "LaserShip": "#3498DB",  // Blue
-//   "Pitt Ohio": "#1ABC9C",  // Turquoise
-//   "Spee-Dee Delivery": "#2ECC71", // Green
-//   "United Delivery Service": "#F1C40F", // Mustard
-//   "Carrier12": "#A569BD", // Purple
-//   "Carrier13": "#34495E", // Dark Blue
-//   "Carrier14": "#7D3C98"  // Violet
-// };
-
-
-// function App() {
-//   // State for the selected carrier and the custom map configuration
-//   const [selectedCarrier, setSelectedCarrier] = useState('');
-//   const [customConfig, setCustomConfig] = useState({});
-//   const [carrierStateMapping, setCarrierStateMapping] = useState({});
-//   const [carriers, setCarriers] = useState([]);
-
-//   useEffect(() => {
-//     const csvFilePath = 'https://partner-coverage.vercel.app/CarrierStateMapping.csv';
-//     Papa.parse(csvFilePath, {
-//       download: true,
-//       header: true,
-//       skipEmptyLines: true,
-//       complete: (result) => {
-//         const mapping = {};
-//         const carriersSet = new Set();
-
-//         result.data.forEach(row => {
-//           const carrierList = row.Carriers.replace(/\([^)]*\)/g, '').split(',').map(c => c.trim());
-//           carrierList.forEach(carrier => {
-//             if (!mapping[carrier]) {
-//               mapping[carrier] = [];
-//             }
-//             mapping[carrier].push(row.code);
-//             carriersSet.add(carrier);
-//           });
-//         });
-
-//         setCarrierStateMapping(mapping);
-//         setSelectedCarrier(Array.from(carriersSet)[0]);
-//         setCarriers(Array.from(carriersSet)); // Update the carriers state
-//         // console.log(Array.from(carriersSet)); // Log the carriers to ensure they're set
-//       }
-//     });
-//   }, []);
-
-//   // Update the map when a new carrier is selected
-//   useEffect(() => {
-//     if (!selectedCarrier || !carrierStateMapping[selectedCarrier]) return;
-
-//     const statesToHighlight = carrierStateMapping[selectedCarrier];
-//     const newConfig = { ...customConfig };
-
-//     statesToHighlight.forEach(state => {
-//       // Directly assign the carrier's color to the state
-//       newConfig[state] = { fill: carrierColors[selectedCarrier] };
-//     });
-
-//     setCustomConfig(newConfig);
-//   }, [selectedCarrier, carrierStateMapping]);
-
-//   // Dropdown change handler
-//   const handleCarrierChange = (event) => {
-//     setSelectedCarrier(event.target.value);
-//   };
-
-//   return (
-//     <div>
-//       {/* <select onChange={handleCarrierChange} value={selectedCarrier}>
-//         {Object.keys(carrierStateMapping).map(carrier => (
-
-//           <option key={carrier} value={carrier}>{carrier}</option>
-//         ))}
-//       </select> */}
-//       <select onChange={handleCarrierChange} value={selectedCarrier}>
-//         {carriers.map(carrier => ( // Use the carriers state here
-//           <option key={carrier} value={carrier}>{carrier}</option>
-//         ))}
-//       </select>
-//       <USAMap customize={customConfig} />
-//     </div>
-//   );
-// }
-
-// export default App;
-
-
-import React, { useState, useEffect } from 'react';
-import USAMap from "react-usa-map";
+import { useEffect, useMemo, useState } from 'react';
 import Papa from 'papaparse';
-import Select from 'react-select'; // Ensure you have installed react-select
+import './App.css';
 
-const carrierColors = {
-  "International Bridge": "#FF5733",  // Red
-  "Courier Express": "#FFC300",  // Yellow
-  "Hackbarth": "#DAF7A6",  // Light Green
-  "LSO": "#581845",  // Dark Purple
-  "GLS": "#C70039",  // Maroon
-  "IntelliQuick Delivery": "#900C3F",  // Dark Red
-  "OnTrac": "#FFC0CB",  // Pink
-  "LaserShip": "#3498DB",  // Blue
-  "Pitt Ohio": "#1ABC9C",  // Turquoise
-  "Spee-Dee Delivery": "#2ECC71", // Green
-  "United Delivery Service": "#F1C40F", // Mustard
-  "Carrier12": "#A569BD", // Purple
-  "Carrier13": "#34495E", // Dark Blue
-  "Carrier14": "#7D3C98"  // Violet
-};
+const PALETTE = ['#0d9488', '#2563eb', '#9333ea', '#db2777', '#d97706', '#65a30d', '#0891b2'];
+
+export function buildCarrierStateMapping(rows) {
+  return rows.reduce((mapping, row) => {
+    if (!row.code || !row.Carriers) {
+      return mapping;
+    }
+
+    row.Carriers.split(',')
+      .map((carrier) => carrier.replace(/\([^)]*\)/g, '').replace(/\u00a0/g, ' ').trim())
+      .filter((carrier) => carrier && carrier !== 'N/A')
+      .forEach((carrier) => {
+        mapping[carrier] = [...new Set([...(mapping[carrier] || []), row.code.trim()])];
+      });
+
+    return mapping;
+  }, {});
+}
+
+export function colorForCarrier(carrier, carriers) {
+  return PALETTE[carriers.indexOf(carrier) % PALETTE.length];
+}
+
+export function buildMapConfig(selectedCarriers, mapping, carriers) {
+  return selectedCarriers.reduce((config, carrier) => {
+    (mapping[carrier] || []).forEach((state) => {
+      config[state] = { fill: colorForCarrier(carrier, carriers) };
+    });
+    return config;
+  }, {});
+}
 
 function App() {
+  const [mapping, setMapping] = useState({});
   const [selectedCarriers, setSelectedCarriers] = useState([]);
-  const [customConfig, setCustomConfig] = useState({});
-  const [carrierStateMapping, setCarrierStateMapping] = useState({});
-  const [carrierOptions, setCarrierOptions] = useState([]);
-
-  // useEffect(() => {
-  //   const csvFilePath = 'https://partner-coverage.vercel.app/CarrierStateMapping.csv';
-  //   Papa.parse(csvFilePath, {
-  //     download: true,
-  //     header: true,
-  //     skipEmptyLines: true,
-  //     complete: (result) => {
-  //       const mapping = {};
-  //       const carriersSet = new Set();
-
-  //       result.data.forEach(row => {
-  //         const carrierList = row.Carriers.replace(/\([^)]*\)/g, '').split(',').map(c => c.trim());
-  //         carrierList.forEach(carrier => {
-
-  //           if (!mapping[carrier]) {
-  //             mapping[carrier] = [];
-  //           }
-  //           mapping[carrier].push(row.code);
-  //           carriersSet.add(carrier);
-  //         });
-  //       });
-
-  //       setCarrierStateMapping(mapping);
-  //       setCarrierOptions(Array.from(carriersSet).map(carrier => ({ value: carrier, label: carrier }))); // Corrected here
-  //     }
-  //   });
-  // }, []);
+  const [status, setStatus] = useState('loading');
 
   useEffect(() => {
-    const csvFilePath = 'https://partner-coverage.vercel.app/CarrierStateMapping.csv';
-    Papa.parse(csvFilePath, {
+    Papa.parse(`${process.env.PUBLIC_URL}/CarrierStateMapping.csv`, {
       download: true,
       header: true,
       skipEmptyLines: true,
-      complete: (result) => {
-        const mapping = {};
-        const carriersSet = new Set();
-
-        result.data.forEach(row => {
-          const carrierList = row.Carriers.replace(/\([^)]*\)/g, '').split(',').map(c => c.trim());
-          carrierList.forEach(carrier => {
-            if (carrier !== "N/A") { // Ignore carrier with the name "N/A"
-              if (!mapping[carrier]) {
-                mapping[carrier] = [];
-              }
-              mapping[carrier].push(row.code);
-              carriersSet.add(carrier);
-            }
-          });
-        });
-
-        setCarrierStateMapping(mapping);
-        setCarrierOptions(Array.from(carriersSet).map(carrier => ({ value: carrier, label: carrier }))); // Corrected here
-      }
+      complete: ({ data, errors }) => {
+        if (errors.length) {
+          setStatus('error');
+          return;
+        }
+        setMapping(buildCarrierStateMapping(data));
+        setStatus('ready');
+      },
+      error: () => setStatus('error'),
     });
   }, []);
 
-  useEffect(() => {
-    let newConfig = {};
+  const carriers = useMemo(() => Object.keys(mapping).sort(), [mapping]);
+  const mapConfig = useMemo(
+    () => buildMapConfig(selectedCarriers, mapping, carriers),
+    [selectedCarriers, mapping, carriers],
+  );
+  const coveredStateCount = useMemo(
+    () => new Set(selectedCarriers.flatMap((carrier) => mapping[carrier] || [])).size,
+    [selectedCarriers, mapping],
+  );
+  const allStates = useMemo(
+    () => [...new Set(Object.values(mapping).flat())].sort(),
+    [mapping],
+  );
 
-    selectedCarriers.forEach(({ value }) => {
-      carrierStateMapping[value].forEach(state => {
-        newConfig[state] = { fill: carrierColors[value] };
-      });
-    });
-
-    setCustomConfig(newConfig);
-  }, [selectedCarriers, carrierStateMapping]);
-
-  const handleCarrierChange = (carrier) => {
-    setSelectedCarriers((prevSelectedCarriers) => {
-      // If the carrier is already selected, remove it
-      if (prevSelectedCarriers.find((selected) => selected.value === carrier.value)) {
-        return prevSelectedCarriers.filter((selected) => selected.value !== carrier.value);
-      }
-      // Otherwise, add it
-      else {
-        return [...prevSelectedCarriers, carrier];
-      }
-    });
+  const toggleCarrier = (carrier) => {
+    setSelectedCarriers((selected) => (
+      selected.includes(carrier)
+        ? selected.filter((item) => item !== carrier)
+        : [...selected, carrier]
+    ));
   };
 
   return (
-    <div>
-      {/* <Select
-        // options={carrierOptions}
-        // isMulti
-        // onChange={handleCarrierChange}
-        // value={selectedCarriers}
-        // className="multi-select"
-  // />*/}
-      <div className="carrier-buttons" style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap' }}>
-        {carrierOptions.map((carrier) => (
-          <button
-            key={carrier.value}
-            style={{
-              backgroundColor: carrierColors[carrier.value],
-              color: 'white',
-              border: selectedCarriers.find((selected) => selected.value === carrier.value) ? '2px solid black' : '',
-              borderRadius: '20px', // make the button rounded
-              padding: '10px 20px', // add some padding
-              margin: '5px', // add some margin
-              fontSize: '1em', // increase the font size
-              transition: 'all 0.3s ease', // add a transition for smooth color change
-              outline: 'none', // remove the outline
-            }}
-            onClick={() => handleCarrierChange(carrier)}
-          >
-            {carrier.label}
-          </button>
-        ))}
-      </div>
-      <div style={{ display: 'flex', justifyContent: 'center' }}>
-        <USAMap customize={customConfig} />
-      </div>    </div>
+    <main className="coverage-page">
+      <section className="coverage-hero" aria-labelledby="coverage-heading">
+        <p className="eyebrow">Coverage explorer</p>
+        <h1 id="coverage-heading">Compare regional delivery coverage at a glance.</h1>
+        <p>Select one or more carriers to see their reported state coverage. The underlying data is included in this repository as a CSV fixture.</p>
+      </section>
+
+      <section className="coverage-workspace" aria-label="Carrier coverage map">
+        <div className="coverage-controls">
+          <div className="control-heading">
+            <div>
+              <h2>Carriers</h2>
+              <p>{status === 'ready' ? `${carriers.length} available` : 'Loading coverage data…'}</p>
+            </div>
+            {selectedCarriers.length > 0 && (
+              <button className="clear-button" type="button" onClick={() => setSelectedCarriers([])}>Clear</button>
+            )}
+          </div>
+          {status === 'error' && <p className="status-message" role="alert">Coverage data could not be loaded.</p>}
+          <div className="carrier-list" aria-label="Carrier selection">
+            {carriers.map((carrier) => {
+              const isSelected = selectedCarriers.includes(carrier);
+              return (
+                <button
+                  className={`carrier-button${isSelected ? ' selected' : ''}`}
+                  key={carrier}
+                  type="button"
+                  aria-pressed={isSelected}
+                  onClick={() => toggleCarrier(carrier)}
+                >
+                  <span style={{ background: colorForCarrier(carrier, carriers) }} aria-hidden="true" />
+                  {carrier}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="map-panel">
+          <div className="map-summary">
+            <div>
+              <span>Selection</span>
+              <strong>{selectedCarriers.length || 'No'} {selectedCarriers.length === 1 ? 'carrier' : 'carriers'}</strong>
+            </div>
+            <div>
+              <span>Covered states</span>
+              <strong>{coveredStateCount}</strong>
+            </div>
+          </div>
+          <div className="state-grid" aria-label="United States state coverage grid">
+            {allStates.map((state) => (
+              <div
+                className={`state-tile${mapConfig[state] ? ' covered' : ''}`}
+                key={state}
+                style={mapConfig[state] ? { backgroundColor: mapConfig[state].fill } : undefined}
+              >
+                {state}
+              </div>
+            ))}
+          </div>
+          <p className="map-note">Where coverage overlaps, the most recently selected carrier color is displayed.</p>
+        </div>
+      </section>
+    </main>
   );
 }
 
